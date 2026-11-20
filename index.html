@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokter 3D — Interactive Experience</title>
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; color: #eef7ff; background: #071522;
+      font-family: Inter, system-ui, Arial, sans-serif; overflow-x: hidden;
+    }
+    #stage {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 42%, #173c50 0%, #0a2030 43%, #071522 78%);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .12;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E"); }
+    nav { position: fixed; z-index: 5; top: 0; left: 0; width: 100%; padding: 24px 6vw;
+      display: flex; justify-content: space-between; align-items: center; }
+    .brand { font-weight: 800; letter-spacing: .12em; font-size: 13px; }
+    .brand span { color: #61e5d1; }
+    nav a { color: #d7e8f1; text-decoration: none; font-size: 13px; opacity: .8; }
+    main { position: relative; z-index: 2; }
+    section { min-height: 100vh; padding: 130px 10vw 90px; display: flex; align-items: center; }
+    .hero { min-height: 110vh; }
+    .copy { width: min(520px, 48vw); }
+    .eyebrow { color: #61e5d1; letter-spacing: .22em; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    h1 { font-size: clamp(48px, 7vw, 100px); line-height: .95; letter-spacing: -.065em; margin: 22px 0; }
+    h1 em { color: #61e5d1; font-style: normal; }
+    p { color: #b4c8d5; font-size: 17px; line-height: 1.8; max-width: 440px; }
+    .hint { margin-top: 38px; display: flex; align-items: center; gap: 12px; color: #8ba7b8; font-size: 12px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #61e5d1; box-shadow: 0 0 16px #61e5d1; }
+    .panel { margin-left: auto; width: min(390px, 36vw); padding: 28px; border: 1px solid #ffffff20;
+      background: #0c2636b8; backdrop-filter: blur(14px); border-radius: 20px; }
+    .panel h2 { margin: 0 0 12px; font-size: 26px; }
+    .panel p { font-size: 14px; margin: 0; }
+    .number { color: #61e5d1; font-size: 12px; letter-spacing: .18em; margin-bottom: 18px; }
+    .second { justify-content: flex-end; }
+    .third { min-height: 85vh; }
+    footer { position: relative; z-index: 2; padding: 28px 6vw; color: #7893a3; font-size: 11px; letter-spacing: .12em; }
+    #status { position: fixed; z-index: 6; bottom: 18px; left: 50%; transform: translateX(-50%);
+      color: #aac1cf; font-size: 11px; letter-spacing: .08em; background: #071522aa;
+      border: 1px solid #ffffff20; padding: 9px 14px; border-radius: 30px; }
+    @media (max-width: 700px) {
+      nav { padding: 18px 6vw; } section { padding: 110px 7vw 70px; }
+      .hero { align-items: flex-start; padding-top: 22vh; }
+      .copy { width: 100%; } .panel { width: 88%; margin: 35vh 0 0 auto; }
+      .second { align-items: flex-end; padding-bottom: 18vh; }
+      .third { align-items: flex-start; }
+      p { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div><div class="grain"></div>
+  <nav><div class="brand">MED<span>3D</span> / EXPERIENCE</div><a href="#about">TENTANG MODEL ↓</a></nav>
+  <main>
+    <section class="hero">
+      <div class="copy">
+        <div class="eyebrow">Interactive 3D character</div>
+        <h1>Meet your<br><em>doctor.</em></h1>
+        <p>Karakter dokter 3D dalam pengalaman web interaktif. Gerakkan mouse untuk melihat karakter mengikuti arah kursor, lalu scroll untuk memutar tampilannya.</p>
+        <div class="hint"><span class="dot"></span> GERAKKAN MOUSE · SCROLL UNTUK ROTASI</div>
+      </div>
+    </section>
+    <section id="about" class="second">
+      <div class="panel">
+        <div class="number">01 — THE CHARACTER</div>
+        <h2>Detail dari setiap sisi.</h2>
+        <p>Karakter akan mengikuti gerakan pointer secara halus. Putaran tambahan mengikuti posisi scroll halaman, jadi setiap bagian halaman memberi sudut pandang yang berbeda.</p>
+      </div>
+    </section>
+    <section class="third">
+      <div class="copy">
+        <div class="eyebrow">A closer look</div>
+        <h1>Designed to<br><em>interact.</em></h1>
+        <p>Terus scroll untuk melihat rotasi penuh. Di perangkat layar sentuh, geser halaman untuk mengubah sudut karakter.</p>
+      </div>
+    </section>
+  </main>
+  <footer>MED3D · INTERACTIVE CHARACTER SHOWCASE</footer>
+  <div id="status">Memuat karakter 3D…</div>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+
+    const stage = document.querySelector('#stage');
+    const status = document.querySelector('#status');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(0, 1.25, 6.8);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    stage.appendChild(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xc9f5ff, 0x183044, 2.0));
+    const key = new THREE.DirectionalLight(0xffffff, 3.2);
+    key.position.set(3, 5, 5); scene.add(key);
+    const rim = new THREE.DirectionalLight(0x51dcca, 2.4);
+    rim.position.set(-4, 2, -3); scene.add(rim);
+
+    const pointer = new THREE.Vector2(0, 0);
+    let model = null, baseY = 0, targetX = 0, targetY = 0, scrollTurn = 0;
+    addEventListener('pointermove', e => {
+      pointer.x = (e.clientX / innerWidth) * 2 - 1;
+      pointer.y = (e.clientY / innerHeight) * 2 - 1;
+      targetY = pointer.x * 0.55;
+      targetX = pointer.y * 0.18;
+    });
+    addEventListener('scroll', () => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      scrollTurn = max > 0 ? (scrollY / max) * Math.PI * 2 : 0;
+    }, { passive: true });
+
+    new GLTFLoader().load('./dokter_kartun_3d(1).glb', gltf => {
+      model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      model.position.sub(center);
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      model.scale.setScalar(3.0 / maxDim);
+      model.position.y -= center.y * (3.0 / maxDim);
+      scene.add(model);
+      status.textContent = 'MODEL SIAP · GERAKKAN MOUSE & SCROLL';
+      setTimeout(() => status.style.opacity = '0', 5000);
+    }, undefined, error => {
+      console.error(error);
+      status.textContent = 'Gagal memuat model. Jalankan lewat Live Server.';
+    });
+
+    const clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      if (model) {
+        model.rotation.y += (scrollTurn + targetY - model.rotation.y) * 0.055;
+        model.rotation.x += (targetX - model.rotation.x) * 0.055;
+        model.position.y = Math.sin(t * 1.1) * 0.035;
+      }
+      camera.position.x += (pointer.x * 0.18 - camera.position.x) * 0.025;
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>
